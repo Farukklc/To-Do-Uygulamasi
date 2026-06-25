@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+        }
+
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 4px;
+        }
+
+        .todo-text {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .update-btn {
+            background-color: #ffc107;
+            color: #000;
+            border-radius: 4px;
+            padding: 4px 8px;
+            border: none;
+        }
+
+        .update-btn:hover {
+            background-color: #e0a800;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            border-radius: 4px;
+            padding: 4px 8px;
+            border: none;
+        }
+
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Görevlerim</h2>
+
+        <div class="input-group">
+            <input type="text" id="todoInput" placeholder="Yeni görev yaz..." onkeypress="handleKeyPress(event)">
+            <button onclick="addTodo()">Ekle</button>
+        </div>
+
+        <ul id="todoList">
+            <!-- Görevler JS ile eklenecek -->
+        </ul>
+    </div>
+
+    <script>
+        const API_URL = '/api/todos';
+        
+        document.addEventListener('DOMContentLoaded', fetchTodos);
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') addTodo();
+        }
+
+        async function fetchTodos() {
+            const response = await fetch(API_URL);
+            const todos = await response.json();
+            renderTodos(todos);
+        }
+
+        async function addTodo() {
+            const title = document.getElementById('todoInput').value.trim();
+            if (!title) return;
+
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title, completed: false })
+            });
+            
+            document.getElementById('todoInput').value = '';
+            fetchTodos();
+        }
+
+        // UPDATE (Güncelleme)
+        async function updateTodo(id, currentTitle, currentStatus) {
+            // Kullanıcıdan yeni ismi girmesini isteyelim
+            const newTitle = prompt("Görevi güncelle:", currentTitle);
+            
+            // Eğer kullanıcı iptal etmezse ve boş bırakmazsa güncelle
+            if (newTitle !== null && newTitle.trim() !== "") {
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle.trim(), completed: currentStatus })
+                });
+                fetchTodos();
+            }
+        }
+
+        async function deleteTodo(id) {
+            if(confirm("Bu görevi silmek istediğine emin misin?")) {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                fetchTodos();
+            }
+        }
+
+        function renderTodos(todos) {
+            const list = document.getElementById('todoList');
+            list.innerHTML = '';
+            
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                
+                const span = document.createElement('span');
+                span.className = 'todo-text';
+                span.textContent = todo.title;
+                
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'btn-group';
+
+                const updateBtn = document.createElement('button');
+                updateBtn.className = 'update-btn';
+                updateBtn.textContent = 'Güncelle';
+                updateBtn.onclick = () => updateTodo(todo.id, todo.title, todo.completed);
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-btn';
+                delBtn.textContent = 'Sil';
+                delBtn.onclick = () => deleteTodo(todo.id);
+                
+                btnGroup.appendChild(updateBtn);
+                btnGroup.appendChild(delBtn);
+
+                li.appendChild(span);
+                li.appendChild(btnGroup);
+                list.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
